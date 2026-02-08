@@ -10,6 +10,7 @@ import {
   type ChannelPlugin,
 } from "openclaw/plugin-sdk";
 
+import { mattermostMessageActions } from "./actions.js";
 import { MattermostConfigSchema } from "./config-schema.js";
 import { resolveMattermostGroupRequireMention } from "./group-mentions.js";
 import { looksLikeMattermostTargetId, normalizeMattermostMessagingTarget } from "./normalize.js";
@@ -64,6 +65,7 @@ export const mattermostPlugin: ChannelPlugin<ResolvedMattermostAccount> = {
   meta: {
     ...meta,
   },
+  actions: mattermostMessageActions,
   onboarding: mattermostOnboardingAdapter,
   pairing: {
     idLabel: "mattermostUserId",
