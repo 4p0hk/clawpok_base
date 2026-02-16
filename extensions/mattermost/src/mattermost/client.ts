@@ -40,6 +40,18 @@ export type MattermostFileInfo = {
   size?: number | null;
 };
 
+export type MattermostReaction = {
+  user_id: string;
+  post_id: string;
+  emoji_name: string;
+  create_at?: number | null;
+};
+
+export type MattermostPostList = {
+  order: string[];
+  posts: Record<string, MattermostPost>;
+};
+
 export function normalizeMattermostBaseUrl(raw?: string | null): string | undefined {
   const trimmed = raw?.trim();
   if (!trimmed) {
@@ -217,4 +229,101 @@ export async function uploadMattermostFile(
     throw new Error("Mattermost file upload failed");
   }
   return info;
+}
+
+export async function getMattermostPost(
+  client: MattermostClient,
+  postId: string,
+): Promise<MattermostPost> {
+  return await client.request<MattermostPost>(`/posts/${postId}`);
+}
+
+export async function updateMattermostPost(
+  client: MattermostClient,
+  postId: string,
+  message: string,
+): Promise<MattermostPost> {
+  return await client.request<MattermostPost>(`/posts/${postId}/patch`, {
+    method: "PUT",
+    body: JSON.stringify({ id: postId, message }),
+  });
+}
+
+export async function deleteMattermostPost(
+  client: MattermostClient,
+  postId: string,
+): Promise<void> {
+  await client.request<Record<string, unknown>>(`/posts/${postId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function addMattermostReaction(
+  client: MattermostClient,
+  params: { userId: string; postId: string; emojiName: string },
+): Promise<MattermostReaction> {
+  return await client.request<MattermostReaction>("/reactions", {
+    method: "POST",
+    body: JSON.stringify({
+      user_id: params.userId,
+      post_id: params.postId,
+      emoji_name: params.emojiName,
+    }),
+  });
+}
+
+export async function removeMattermostReaction(
+  client: MattermostClient,
+  params: { userId: string; postId: string; emojiName: string },
+): Promise<void> {
+  await client.request<Record<string, unknown>>(
+    `/users/${params.userId}/posts/${params.postId}/reactions/${params.emojiName}`,
+    { method: "DELETE" },
+  );
+}
+
+export async function getMattermostReactions(
+  client: MattermostClient,
+  postId: string,
+): Promise<MattermostReaction[]> {
+  return await client.request<MattermostReaction[]>(`/posts/${postId}/reactions`);
+}
+
+export async function pinMattermostPost(
+  client: MattermostClient,
+  postId: string,
+): Promise<void> {
+  await client.request<Record<string, unknown>>(`/posts/${postId}/pin`, {
+    method: "POST",
+  });
+}
+
+export async function unpinMattermostPost(
+  client: MattermostClient,
+  postId: string,
+): Promise<void> {
+  await client.request<Record<string, unknown>>(`/posts/${postId}/unpin`, {
+    method: "POST",
+  });
+}
+
+export async function getPinnedMattermostPosts(
+  client: MattermostClient,
+  channelId: string,
+): Promise<MattermostPostList> {
+  return await client.request<MattermostPostList>(`/channels/${channelId}/pinned`);
+}
+
+export async function getMattermostChannelPosts(
+  client: MattermostClient,
+  params: { channelId: string; perPage?: number; before?: string; after?: string },
+): Promise<MattermostPostList> {
+  const query = new URLSearchParams();
+  if (params.perPage) query.set("per_page", String(params.perPage));
+  if (params.before) query.set("before", params.before);
+  if (params.after) query.set("after", params.after);
+  const qs = query.toString();
+  return await client.request<MattermostPostList>(
+    `/channels/${params.channelId}/posts${qs ? `?${qs}` : ""}`,
+  );
 }
